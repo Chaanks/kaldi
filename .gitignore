@@ -60,6 +60,8 @@ GSYMS
 *.exp
 *.manifest
 
+/egs/*/*/RIRS_NOISES
+
 # /src/
 /src/.short_version
 /src/base/version.h

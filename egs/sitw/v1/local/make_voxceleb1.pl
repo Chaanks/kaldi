@@ -53,8 +53,10 @@ while (<META_IN>) {
 }
 close(META_IN) or die;
 
-opendir my $dh, "$data_base/voxceleb1_wav" or die "Cannot open directory: $!";
-my @spkr_dirs = grep {-d "$data_base/voxceleb1_wav/$_" && ! /^\.{1,2}$/} readdir($dh);
+#opendir my $dh, "$data_base/voxceleb1_wav" or die "Cannot open directory: $!";
+opendir my $dh, "$data_base/voxceleb1_16khz" or die "Cannot open directory: $!";
+#my @spkr_dirs = grep {-d "$data_base/voxceleb1_wav/$_" && ! /^\.{1,2}$/} readdir($dh);
+my @spkr_dirs = grep {-d "$data_base/voxceleb1_16khz/$_" && ! /^\.{1,2}$/} readdir($dh);
 closedir $dh;
 
 open(SPKR, ">", "$out_dir/utt2spk") or die "Could not open the output file $out_dir/utt2spk";
@@ -64,7 +66,9 @@ foreach (@spkr_dirs) {
   my $spkr_id = $_;
   # Only keep the speaker if it isn't in the overlap list.
   if (not exists $sitw_overlap{$spkr_id}) {
-    opendir my $dh, "$data_base/voxceleb1_wav/$spkr_id/" or die "Cannot open directory: $!";
+    #opendir my $dh, "$data_base/voxceleb1_wav/$spkr_id/" or die "Cannot open directory: $!";
+    opendir my $dh, "$data_base/voxceleb1_16khz/$spkr_id/" or die "Cannot open directory: $!";
+
     my @files = map{s/\.[^.]+$//;$_}grep {/\.wav$/} readdir($dh);
     closedir $dh;
     foreach (@files) {
@@ -72,7 +76,8 @@ foreach (@spkr_dirs) {
       my $rec_id = substr($filename, 0, 11);
       my $segment = substr($filename, 12, 7);
       my $utt_id = "$spkr_id-$rec_id-$segment";
-      my $wav = "$data_base/voxceleb1_wav/$spkr_id/$filename.wav";
+      #my $wav = "$data_base/voxceleb1_wav/$spkr_id/$filename.wav";
+      my $wav = "$data_base/voxceleb1_16khz/$spkr_id/$filename.wav";
       print WAV "$utt_id", " $wav", "\n";
       print SPKR "$utt_id", " $spkr_id", "\n";
     }

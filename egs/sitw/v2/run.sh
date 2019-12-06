@@ -21,25 +21,28 @@ set -e
 mfccdir=`pwd`/mfcc
 vaddir=`pwd`/mfcc
 
-voxceleb1_root=/export/corpora/VoxCeleb1
-voxceleb2_root=/export/corpora/VoxCeleb2
-sitw_root=/export/corpora/SRI/sitw
+voxceleb1_root=/local_disk/heracles/rouvier/voxceleb/voxceleb/data/v1/ # make_voxceleb1.pl l-56
+voxceleb2_root=/corpus/voxceleb/voxceleb2
+sitw_root=/local_disk/arges/jduret/corpus/sitw
+
 nnet_dir=exp/xvector_nnet_1a
-musan_root=/export/corpora/JHU/musan
+musan_root=/corpus/musan
 
 sitw_dev_trials_core=data/sitw_dev_test/trials/core-core.lst
 sitw_eval_trials_core=data/sitw_eval_test/trials/core-core.lst
 
-stage=0
+stage=$1
 
 if [ $stage -le 0 ]; then
   # Prepare the VoxCeleb1 dataset.  The script also downloads a list from
   # http://www.openslr.org/resources/49/voxceleb1_sitw_overlap.txt that
   # contains the speakers that overlap between VoxCeleb1 and our evaluation
   # set SITW.  The script removes these overlapping speakers from VoxCeleb1.
+  echo "Prepare the VoxCeleb1 dataset"
   local/make_voxceleb1.pl $voxceleb1_root data
 
   # Prepare the dev portion of the VoxCeleb2 dataset.
+  echo "Prepare the VoxCeleb2 dataset"
   local/make_voxceleb2.pl $voxceleb2_root dev data/voxceleb2_train
 
   # The original version of this recipe included the test portion of VoxCeleb2
@@ -51,19 +54,22 @@ if [ $stage -le 0 ]; then
   # We'll train on the dev portion of VoxCeleb2, plus VoxCeleb1 (minus the
   # speakers that overlap with SITW).
   # This should leave 7,185 speakers and 1,236,567 utterances.
+  echo "Combine dev portion of VoxCeleb2, plus VoxCeleb1 (minus the speakers that overlap with SITW)."
   utils/combine_data.sh data/train data/voxceleb2_train data/voxceleb1
 
   # Prepare Speakers in the Wild.  This is our evaluation dataset.
+  echo "Prepare SITW"
   local/make_sitw.sh $sitw_root data
 fi
 
 if [ $stage -le 1 ]; then
+  echo "Make MFCCs"
   # Make MFCCs and compute the energy-based VAD for each dataset
   for name in sitw_eval_enroll sitw_eval_test sitw_dev_enroll sitw_dev_test train; do
-    steps/make_mfcc.sh --write-utt2num-frames true --mfcc-config conf/mfcc.conf --nj 80 --cmd "$train_cmd" \
+    steps/make_mfcc.sh --write-utt2num-frames true --mfcc-config conf/mfcc.conf --nj 40 --cmd "$train_cmd" \
       data/${name} exp/make_mfcc $mfccdir
     utils/fix_data_dir.sh data/${name}
-    sid/compute_vad_decision.sh --nj 80 --cmd "$train_cmd" \
+    sid/compute_vad_decision.sh --nj 40 --cmd "$train_cmd" \
       data/${name} exp/make_vad $vaddir
     utils/fix_data_dir.sh data/${name}
   done
@@ -131,7 +137,7 @@ if [ $stage -le 3 ]; then
   # Make MFCCs for the augmented data.  Note that we do not compute a new
   # vad.scp file here.  Instead, we use the vad.scp from the clean version of
   # the list.
-  steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 80 --cmd "$train_cmd" \
+  steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 40 --cmd "$train_cmd" \
     data/train_aug_1m exp/make_mfcc $mfccdir
 
   # Combine the clean and augmented VoxCeleb2 list.  This is now roughly
@@ -144,7 +150,7 @@ if [ $stage -le 4 ]; then
   # This script applies CMVN and removes nonspeech frames.  Note that this is somewhat
   # wasteful, as it roughly doubles the amount of training data on disk.  After
   # creating training examples, this can be removed.
-  local/nnet3/xvector/prepare_feats_for_egs.sh --nj 80 --cmd "$train_cmd" \
+  local/nnet3/xvector/prepare_feats_for_egs.sh --nj 40 --cmd "$train_cmd" \
     data/train_combined data/train_combined_no_sil exp/train_combined_no_sil
   utils/fix_data_dir.sh data/train_combined_no_sil
 fi
@@ -191,7 +197,7 @@ if [ $stage -le 9 ]; then
      --utt-list <(sort -n -k 2 data/train_combined_no_sil/utt2num_frames | tail -n 200000) \
      data/train_combined data/train_combined_200k
 
-   sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 4G" --nj 80 \
+   sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 4G" --nj 40 \
     $nnet_dir data/train_combined_200k \
     $nnet_dir/xvectors_train_combined_200k
 
