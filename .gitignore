@@ -60,8 +60,6 @@ GSYMS
 *.exp
 *.manifest
 
-/egs/*/*/RIRS_NOISES
-
 # /src/
 /src/.short_version
 /src/base/version.h
@@ -79,6 +77,7 @@ GSYMS
 /egs/*/*/plp
 /egs/*/*/exp
 /egs/*/*/data
+/egs/*/*/RIRS_NOISES
 
 # /tools/
 /tools/pocolm/
